@@ -1,16 +1,38 @@
 'use strict';
 
 function getFileInputs() {
-  console.log(window);
-  // return Array.from(window.querySelectorAll('input[type="file"]'));
+  return Array.from(document.querySelectorAll('input[type="file"]'));
 };
 
-chrome.runtime.onInstalled.addListener(function() {
-  const inputs = getFileInputs();
-  console.log(inputs);
+function FileListItems (files) {
+  const b = new ClipboardEvent("").clipboardData || new DataTransfer()
+  for (let i = 0, len = files.length; i<len; i++) b.items.add(files[i])
+  return b.files
+};
 
-  const observer = new MutationObserver((mutations) => {
-    const newInputs = getFileInputs();
-    console.log(newInputs);
+function transformInput(node) {
+  const isTransformed = node.getAttribute('data-input-url-transformed');
+
+  if (isTransformed) {
+    return;
+  }
+
+  node.setAttribute('data-input-url-transformed', true);
+
+  const urlInput = document.createElement('input');
+  
+  urlInput.addEventListener('input', async (event) => {
+    const blob = await fetch(event.target.value).then(r => r.blob());
+    node.files = new FileListItems([new File([blob], event.target.value)]);
   });
-});
+
+  node.parentNode.appendChild(urlInput);
+}
+
+function transformInputs() {
+  const inputs = getFileInputs();
+  inputs.forEach(transformInput);
+}
+
+
+transformInputs();
